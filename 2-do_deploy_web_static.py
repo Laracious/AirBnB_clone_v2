@@ -1,49 +1,45 @@
 #!/usr/bin/python3
-""" This script distributes an archive to webservers"""
-from fabric.api import local, put, run, env
+from fabric.api import *
 from datetime import datetime
-from os.path import isfile
-
-env.hosts = ["100.25.30.148", "35.175.105.87"]
-env.user = "ubuntu"
+import os.path
+import re
+import os
+env.hosts = ['34.74.176.42', '34.75.43.152']
 
 
 def do_pack():
-    """ Generates a .tgz archive """
+        """ Generate a tar archives """
+        date_recent = datetime.now().strftime("%Y%m%d%H%M%S")
+        path_ruth = "versions/web_static_{}.tgz".format(date_recent)
+        try:
+                local("mkdir -p versions")
+                local("tar -czvf {} web_static".format(path_ruth))
+                return path_ruth
+        except:
+                return None
 
-    time_now = datetime.now().strftime("%Y%m%d%H%M%S")
-    filename = "web_static_{}.tgz".format(time_now)
-    archive_path = "versions/{}".format(filename)
-
-    print("Packing web_static to {}".format(archive_path))
-
-    local("mkdir -p versions")
-    local("tar -cvzf {} web_static".format(archive_path))
-
-    print("Successfully packed web_static to {}".format(archive_path))
-
-    return archive_path
 
 def do_deploy(archive_path):
-    """ Distributes an archive to webserver """
-
-    if not isfile(archive_path):
-        return False
-
-    print("Deploying new version")
-
-    archive_name = archive_path.split("/")[-1]
-    folder_name = archive_name[: -4]
-    dir_path = "/data/web_static/releases/{}".format(folder_name)
-
-    put(archive_path, "/tmp/")
-    run("mkdir -p {}".format(dir_path))
-    run("tar -xzf /tmp/{} -C {}".format(archive_name, dir_path))
-    run("cp -r {}/web_static/* {}".format(dir_path, dir_path))
-    run("rm -rf /tmp/{} {}/web_static".format(archive_name, dir_path))
-    run("rm -rf /data/web_static/current")
-    run("ln -s {} /data/web_static/current".format(dir_path))
-
-    print("New version deployed!")
-
-    return True
+        try:
+                if not os.path.exists(archive_path):
+                        return False
+                put(archive_path, "/tmp/")
+                fileComp = archive_path.split("/")[1].split(".")[0]
+                path = "/data/web_static/releases/{}".format(fileComp)
+                tgzFile = fileComp + '.tgz'
+                print(fileComp)
+                print(path)
+                print(tgzFile)
+                
+                run("mkdir -p {}".format(path))
+                run("tar -xvzf /tmp/{}.tgz -C {}".format(fileComp, path))
+                run("sudo rm /tmp/{}.tgz".format(fileComp))
+                run("sudo rm /data/web_static/current")
+                run("sudo ln -sf /data/web_static/releases/{}\
+                /data/web_static/current".format(fileComp))
+                run("sudo mv /data/web_static/releases/{}/web_static/* \
+                /data/web_static/releases/{}/".format(fileComp, fileComp))
+                run("rm -rf /data/web_static/releases/{}/web_static".format(fileComp))
+                return True
+        except:
+                return False
