@@ -1,27 +1,22 @@
 #!/usr/bin/env bash
-# sets up your web servers for the deployment of web_static
-apt-get update
+# This script sets up webservers for the deployment of the webstatic
+
+# Update and install nginx if it doesnt exist
+apt-get -y update
 apt-get -y install nginx
-mkdir -p /data/
-mkdir -p /data/web_static/
-mkdir -p /data/web_static/releases/
-mkdir -p /data/web_static/shared/
-mkdir -p /data/web_static/releases/test/
-echo -e "<html>\n  <head>\n  </head>\n  <body>\n    Holberton School\n  </body>\n</html>" > /data/web_static/releases/test/index.html
 
-if [[ -L /data/web_static/current ]]
-then
-    rm /data/web_static/current
-fi
+# create these folders if they dont exist
+mkdir -p /data/web_static/releases/test/ /data/web_static/shared/
 
-ln -sf /data/web_static/releases/test /data/web_static/current
+# create an html file with fake content to test configuration
+echo -e "<html>\n\t<head>\n\t</head>\n\t<body>\n\t\t<h1>Hello ALX</h1>\n\t</body>\n</html>" > /data/web_static/releases/test/index.html
+
+# remove the symbolic link if exist and recreate it
+rm -rf /data/web_static/current
+ln -s /data/web_static/releases/test/ /data/web_static/current
+
+# give ownership to the user and group ubuntu
 chown -R ubuntu:ubuntu /data/
 
-if grep -q hbnb_static /etc/nginx/sites-available/default
-then
-    echo ""
-else
-    sed -i '/:80 default_server/a \\tlocation /hbnb_static/ {\n\t\talias /data/web_static/current/;\n\t}' /etc/nginx/sites-available/default
-fi
-
-service nginx restart
+# update the nginx config the content of /data/web_static/current/ to hbnb_static
+sed -i "s/^\s*location \/ {/\tlocation \/hbnb_static {\n\t\talias \/data\/web_static\/current\/;\n\t}\n\n&/" /etc/nginx/sites-enabled/default
